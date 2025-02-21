@@ -1,0 +1,54 @@
+select 
+fftbl.BASE_USER_TABLE_NAME as BASE_USER_TABLE_NAME,
+ffcol.BASE_USER_COLUMN_NAME as BASE_USER_COLUMN_NAME,
+ffrow.DISPLAY_SEQUENCE as DISPLAY_SEQUENCE,
+ffrow.ROW_NAME as ROW_NAME,
+ffcolins.VALUE as VALUE,
+to_char(ffcolins.EFFECTIVE_START_DATE,'YYYY/MM/DD') as effective_start_date,
+to_char(ffcolins.EFFECTIVE_END_DATE,'YYYY/MM/DD') as effective_end_date,
+
+ffcol.BASE_USER_COLUMN_NAME || ffrow.ROW_NAME as fyi_concat_for_vlookup,
+
+to_char(fftbl.USER_TABLE_ID) as USER_TABLE_ID,
+to_char(ffcol.USER_COLUMN_ID) as USER_COLUMN_ID,
+to_char(ffrow.USER_ROW_ID) as USER_ROW_ID,
+to_char(ffcolins.USER_COLUMN_INSTANCE_ID) as USER_COLUMN_INSTANCE_ID,
+
+keytbl.SOURCE_SYSTEM_OWNER as TABLE_SOURCE_OWNER,
+keytbl.SOURCE_SYSTEM_ID as TABLE_SOURCE_ID,
+
+keycol.SOURCE_SYSTEM_OWNER as COL_SOURCE_OWNER,
+keycol.SOURCE_SYSTEM_ID as COL_SOURCE_ID,
+
+keyrow.SOURCE_SYSTEM_OWNER as ROW_SOURCE_OWNER,
+keyrow.SOURCE_SYSTEM_ID as ROW_SOURCE_ID,
+
+keycolins.SOURCE_SYSTEM_OWNER as COLINS_SOURCE_OWNER,
+keycolins.SOURCE_SYSTEM_ID as COLINS_SOURCE_ID
+
+from
+FF_USER_TABLES_VL fftbl,
+FF_USER_ROWS_VL ffrow,
+FF_USER_COLUMN_INSTANCES_F ffcolins,
+FF_USER_COLUMNS_VL ffcol,
+HRC_INTEGRATION_KEY_MAP keytbl,
+HRC_INTEGRATION_KEY_MAP keyrow,
+HRC_INTEGRATION_KEY_MAP keycolins,
+HRC_INTEGRATION_KEY_MAP keycol
+
+where
+fftbl.USER_TABLE_ID = keytbl.SURROGATE_ID
+and fftbl.USER_TABLE_ID = ffrow.USER_TABLE_ID
+
+and ffrow.USER_ROW_ID = ffcolins.USER_ROW_ID(+)
+and ffrow.USER_ROW_ID = keyrow.SURROGATE_ID
+
+and ffcolins.USER_COLUMN_ID = ffcol.USER_COLUMN_ID(+)
+and ffcolins.USER_COLUMN_INSTANCE_ID = keycolins.SURROGATE_ID(+)
+
+and ffcol.USER_COLUMN_ID = keycol.SURROGATE_ID(+)
+
+and upper(fftbl.BASE_USER_TABLE_NAME) like upper((:UDT_TABLE_NAME || '%'))
+and upper(ffcol.BASE_USER_COLUMN_NAME) like upper((:UDT_COLUMN_NAME || '%'))
+
+order by fftbl.BASE_USER_TABLE_NAME, ffrow.DISPLAY_SEQUENCE, ffcol.BASE_USER_COLUMN_NAME, ffcolins.VALUE
